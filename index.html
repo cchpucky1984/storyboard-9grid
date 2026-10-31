@@ -188,7 +188,7 @@ function buildGrid(rows, cols){
     ro.observe(el);
     syncCell(j);
   }
-  requestAnimationFrame(function(){ for(var q=0;q<n;q++) drawCell(q); });
+  requestAnimationFrame(function(){ fitBoard(); for(var q=0;q<n;q++) drawCell(q); });
   updateMeta();
 }
 
@@ -209,6 +209,21 @@ function select(i){
 function updateMeta(){
   var filled = state.cells.filter(function(c){ return c && c.img; }).length;
   $('#meta').textContent = filled + ' / ' + state.cells.length + ' 格已放入圖片';
+}
+
+/* 整個格盤自動縮放到可視範圍，令九格唔需要捲動就睇得晒 */
+function fitBoard(){
+  var stage = document.querySelector('.stage');
+  var hint = stage.querySelector('.hint');
+  var g = 10;
+  var availW = stage.clientWidth - 40;
+  var availH = stage.clientHeight - 56 - (hint ? hint.offsetHeight : 0);
+  if(availW < 80 || availH < 80) return;
+  var ar = state.cw / state.ch;
+  var byW = (availW - g*(state.cols-1)) / state.cols;
+  var byH = ((availH - g*(state.rows-1)) / state.rows) * ar;
+  var cellW = Math.max(60, Math.min(byW, byH, 430));
+  board.style.width = Math.round(cellW*state.cols + g*(state.cols-1)) + 'px';
 }
 
 /* ---------- 繪圖 ---------- */
@@ -606,6 +621,7 @@ $('#selRatio').addEventListener('change', function(e){
   state.cw = r[0]; state.ch = r[1];
   board.style.setProperty('--ar', r[0]/r[1]);
   requestAnimationFrame(function(){
+    fitBoard();
     for(var i=0;i<state.cells.length;i++) drawCell(i);
   });
   setStatus('每格比例 ' + e.target.value);
@@ -626,6 +642,14 @@ $('#chkNum').addEventListener('change', function(e){ state.opts.showNum = e.targ
 buildGrid(3, 3);
 board.style.setProperty('--ar', 16/9);
 updateMeta();
+fitBoard();
+
+var fitPending = false;
+window.addEventListener('resize', function(){
+  if(fitPending) return;
+  fitPending = true;
+  requestAnimationFrame(function(){ fitPending = false; fitBoard(); });
+});
 
 /* 供測試 / 進階使用 */
 window.SB = {
